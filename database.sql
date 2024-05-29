@@ -30,6 +30,7 @@ CREATE TABLE permissions(
 	name VARCHAR(100)
 );
 INSERT INTO permissions (name) VALUES ('list_all_users'), ('edit_user_details'), ('add_new_user'), ('list_personal_details'), ('edit_personal_details'), ('assign_roles'), ('assign_permissions');
+INSERT INTO permissions (name) VALUEs ('romove_permission');
 
 DROP TABLE user_has_permissions;
 CREATE TABLE user_has_permissions(
@@ -40,6 +41,8 @@ CREATE TABLE user_has_permissions(
 );
 INSERT INTO user_has_permissions (user_id, permission_id) VALUES (1, 1), (1, 2), (1, 3), (1, 4), (1, 5), (1, 6), (1, 7);
 ALTER TABLE user_has_permissions DROP role_id;
+INSERT INTO user_has_permissions (user_id, permission_id) VALUES (1, 9);
+
 DROP PROCEDURE IF EXISTS getAllUsers;
 CREATE PROCEDURE getAllUsers 
 AS
@@ -63,6 +66,7 @@ BEGIN
 	ON permissions.id = user_perm.permission_id
 	WHERE user_perm.user_id = @id;
 END;
+EXEC getPermissions 1;
 
 DROP PROCEDURE assignPermission;
 CREATE PROCEDURE assignPermission @user_id INT, @permission_id INT
@@ -70,6 +74,7 @@ AS
 BEGIN
 	INSERT INTO user_has_permissions (user_id, permission_id) VALUES (@user_id, @permission_id);
 END;
+EXEC assignPermission 1, 4;
 
 INSERT INTO user_has_permissions(user_id, permission_id) VALUES(1, 7);
 
@@ -88,6 +93,32 @@ BEGIN
 	WHERE id = @id;
 END;
 
+CREATE PROCEDURE getOneUser @id INT
+AS
+BEGIN
+	SELECT users.id, users.first_name, users.last_name, users.age,
+	CASE users.gender
+		WHEN 'm' THEN 'Male'
+		WHEN 'f' THEN 'Female'
+	END
+	AS gender, users.phone_no, users.email, roles.name AS role, users.password
+	FROM users INNER JOIN roles
+	ON users.role_id = roles.id
+	WHERE users.id = @id;
+END;
+
+CREATE PROCEDURE removePermission @user_id INT, @permission_id INT
+AS
+BEGIN
+	DELETE FROM user_has_permissions WHERE user_id=@user_id AND permission_id=@permission_id;
+END;
+
+DELETE FROM user_has_permissions WHERE permission_id = 6;
+DELETE FROM permissions WHERE id = 6;
 SELECT * FROM permissions;
+
+SELECT name FROM permissions WHERE id IN (SELECT permission_id FROM user_has_permissions WHERE user_id = 1);
+
+SELECT * FROM user_has_permissions;
 
 DELETE FROM user_has_permissions WHERE permission_id = 5 and user_id = 1;

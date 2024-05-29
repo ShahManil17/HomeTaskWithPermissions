@@ -181,7 +181,31 @@ namespace HomeTaskWithPermissions
 
         public static void list_personal_details(SqlConnection conn)
         {
-
+            Console.WriteLine();
+            Console.Write("Enter the ID of the Employee : ");
+            int emp_id = Convert.ToInt32(Console.ReadLine());
+            if(Validation.validateId(conn, emp_id))
+            {
+                SqlCommand cmd = new SqlCommand("getOneUser", conn);
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.AddWithValue("id", emp_id);
+                using (SqlDataReader data = cmd.ExecuteReader())
+                {
+                    int fields = data.FieldCount;
+                    while (data.Read())
+                    {
+                        for (int i = 0; i < fields; i++)
+                        {
+                            Console.Write("{0} : {1}\t", data.GetName(i), data[data.GetName(i)]);
+                        }
+                        Console.Write("\n");
+                    }
+                }
+            }
+            else
+            {
+                Console.WriteLine("Entered ID is not available in the system!");
+            }
         }
 
         public static void edit_personal_details(SqlConnection conn)
@@ -189,9 +213,76 @@ namespace HomeTaskWithPermissions
 
         }
 
-        public static void assign_roles(SqlConnection conn)
+        public static void romove_permission(SqlConnection conn)
         {
+            Console.WriteLine();
+            Console.Write("Enter Id of the user : ");
+            int emp_id = Convert.ToInt32(Console.ReadLine());
+            if(Validation.validateId(conn, emp_id))
+            {
+                Console.Write("Enter Pemissions Saperated by coma (,) : ");
+                string[] input_permissions = Console.ReadLine().Split(',');
 
+                if(Validation.validatePermissions(conn, input_permissions))
+                {
+                    SqlCommand countQ = new SqlCommand("SELECT count(*) AS count FROM permissions WHERE id IN (SELECT permission_id FROM user_has_permissions WHERE user_id = @user_id)", conn);
+                    countQ.Parameters.AddWithValue("@user_id", emp_id);
+                    int permission_count = Convert.ToInt32(countQ.ExecuteScalar());
+
+                    string[] user_permissions = new string[permission_count];
+
+                    SqlCommand avilable_permissionQ = new SqlCommand("SELECT name FROM permissions WHERE id IN (SELECT permission_id FROM user_has_permissions WHERE user_id = @user_id)", conn);
+                    avilable_permissionQ.Parameters.AddWithValue("@user_id", emp_id);
+                    SqlDataReader avail_permission = avilable_permissionQ.ExecuteReader();
+                    //Console.WriteLine("--------------");
+                    //while (avail_permission.Read())
+                    //{
+                    //    Console.WriteLine(avail_permission["name"]);
+                    //}
+                    //Console.WriteLine("--------------");
+
+                    int count = 0;
+                    while(avail_permission.Read())
+                    {
+                        //Console.WriteLine("---->{0}", Convert.ToString(avail_permission["name"]));
+                        user_permissions[count] = Convert.ToString(avail_permission["name"]);
+                        count++;
+                    }
+                    avail_permission.Close();
+                    foreach (var item in input_permissions)
+                    {
+                        if(user_permissions.Contains(item))
+                        {
+                            SqlCommand permissionIdQ = new SqlCommand("SELECT id FROM permissions WHERE name = @name", conn);
+                            permissionIdQ.Parameters.AddWithValue("@name", item);
+                            int permission_id = Convert.ToInt32(permissionIdQ.ExecuteScalar());
+                            Console.WriteLine("--{0}--{1}", emp_id, permission_id);
+                            SqlCommand removePermission = new SqlCommand("removePermission", conn);
+                            removePermission.CommandType = CommandType.StoredProcedure;
+                            removePermission.Parameters.AddWithValue("@user_id", emp_id);
+                            removePermission.Parameters.AddWithValue("@permission_id", permission_id);
+
+                            int removeResult = removePermission.ExecuteNonQuery();
+
+                            Console.WriteLine("Permission '{0}' Removed SuccessFully", item);
+                        }
+                        else
+                        {
+                            Console.WriteLine("Permission '{0}' is not assigned to the user", item);
+                        }
+                    }
+                }
+                else
+                {
+                    Console.WriteLine();
+                    Console.WriteLine("Invalid Permission/s Entered!");
+                }
+            }
+            else
+            {
+                Console.WriteLine();
+                Console.WriteLine("Entered Id is not registered unnder the system!");
+            }
         }
 
         public static void assign_permissions(SqlConnection conn)
