@@ -14,6 +14,12 @@ CREATE TABLE users (
 	password VARCHAR(100),
 	FOREIGN KEY (role_id) REFERENCES roles(id)
 );
+
+ALTER TABLE users
+ALTER COLUMN  first_name VARCHAR(50) NULL;
+ALTER TABLE users
+ALTER COLUMN  last_name VARCHAR(50) NULL;
+
 INSERT INTO users (first_name, last_name, age, gender, phone_no, email, role_id, password) VALUES ('manil', 'shah', 21, 'm', '8200962959', 'manilrshah@gmail.com', 1, 'manil');
 INSERT INTO users (first_name, last_name, age, gender, phone_no, email, role_id, password) VALUES ('mihir', 'thakkar', 21, 'm', '9865962959', 'mihir.thakkar@gmail.com', 1, 'mihir');
 INSERT INTO users (first_name, last_name, age, gender, phone_no, email, role_id, password) VALUES ('yash', 'vachhani', 21, 'm', '9865965659', 'yash.vachhani@gmail.com', 1, 'yash');
@@ -79,11 +85,18 @@ EXEC assignPermission 1, 4;
 INSERT INTO user_has_permissions(user_id, permission_id) VALUES(1, 7);
 
 DROP PROCEDURE addUser;
-CREATE PROCEDURE addUser @name VARCHAR(50), @surname VARCHAR(50), @age INT, @gender  CHAR(1), @no VARCHAR(10), @email VARCHAR(100), @role VARCHAR(20), @pass VARCHAR(100)
+CREATE PROCEDURE addUser @role VARCHAR(20), @pass VARCHAR(100)
 AS 
 BEGIN
-	INSERT INTO users (first_name, last_name, age, gender, phone_no, email, role_id, password) VALUES (@name, @surname, @age, @gender, @no, @email,  @role, @pass);
+	INSERT INTO users (role_id, password) VALUES (@role, @pass);
 	SELECT SCOPE_IDENTITY();
+END;
+
+CREATE PROCEDURE addDetails @id INT, @name VARCHAR(50), @surname VARCHAR(50), @age INT, @gender  CHAR(1), @no VARCHAR(10), @email VARCHAR(100), @password VARCHAR(100)
+AS 
+BEGIN 
+	UPDATE users SET first_name=@name, last_name=@surname, age=@age, gender=@gender, phone_no=@no, email=@email, password=@password
+	WHERE id = @id;
 END;
 
 CREATE PROCEDURE updateDetails @id INT, @name VARCHAR(50), @surname VARCHAR(50), @age INT, @gender  CHAR(1), @no VARCHAR(10), @email VARCHAR(100), @role VARCHAR(20), @pass VARCHAR(100)
@@ -113,12 +126,14 @@ BEGIN
 	DELETE FROM user_has_permissions WHERE user_id=@user_id AND permission_id=@permission_id;
 END;
 
+
+
 DELETE FROM user_has_permissions WHERE permission_id = 6;
 DELETE FROM permissions WHERE id = 6;
 SELECT * FROM permissions;
-
-SELECT name FROM permissions WHERE id IN (SELECT permission_id FROM user_has_permissions WHERE user_id = 1);
+-- list_personal_details,edit_personal_details
+INSERT INTO user_has_permissions (user_id, permission_id) VALUES (2, 8), (3, 8), (4, 8);
 
 SELECT * FROM user_has_permissions;
-
+-- add, update, 
 DELETE FROM user_has_permissions WHERE permission_id = 5 and user_id = 1;

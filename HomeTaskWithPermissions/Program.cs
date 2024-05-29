@@ -91,18 +91,6 @@ namespace HomeTaskWithPermissions
 
         public static void add_new_user(SqlConnection conn)
         {
-            Console.Write("Ente Name : ");
-            string add_name = Console.ReadLine();
-            Console.Write("Enter Surname : ");
-            string add_surname = Console.ReadLine();
-            Console.Write("Enter Age : ");
-            int add_age = Convert.ToInt32(Console.ReadLine());
-            Console.Write("Enter Gender (m/f) : ");
-            char add_gender = Convert.ToChar(Console.ReadLine());
-            Console.Write("Enter Contact No. : ");
-            string add_no = Console.ReadLine();
-            Console.Write("Enter e-mail address : ");
-            string add_email = Console.ReadLine();
             Console.Write("Enter Role (admin, manager Or user) : ");
             string role = Console.ReadLine();
 
@@ -130,12 +118,6 @@ namespace HomeTaskWithPermissions
 
                     SqlCommand addCmd = new SqlCommand("addUser", conn);
                     addCmd.CommandType = CommandType.StoredProcedure;
-                    addCmd.Parameters.AddWithValue("@name", add_name);
-                    addCmd.Parameters.AddWithValue("@surname", add_surname);
-                    addCmd.Parameters.AddWithValue("@age", add_age);
-                    addCmd.Parameters.AddWithValue("@gender", add_gender);
-                    addCmd.Parameters.AddWithValue("@no", add_no);
-                    addCmd.Parameters.AddWithValue("@email", add_email);
                     addCmd.Parameters.AddWithValue("@role", role_id);
                     addCmd.Parameters.AddWithValue("@pass", add_pass);
 
@@ -179,11 +161,19 @@ namespace HomeTaskWithPermissions
             }
         }
 
-        public static void list_personal_details(SqlConnection conn)
+        public static void list_personal_details(SqlConnection conn, int user_id)
         {
-            Console.WriteLine();
-            Console.Write("Enter the ID of the Employee : ");
-            int emp_id = Convert.ToInt32(Console.ReadLine());
+            int emp_id = 0;
+            if (user_id == 0)
+            {
+                Console.WriteLine();
+                Console.Write("Enter the ID of the Employee : ");
+                emp_id = Convert.ToInt32(Console.ReadLine());
+            }
+            else
+            {
+                emp_id = user_id;
+            }
             if(Validation.validateId(conn, emp_id))
             {
                 SqlCommand cmd = new SqlCommand("getOneUser", conn);
@@ -208,9 +198,37 @@ namespace HomeTaskWithPermissions
             }
         }
 
-        public static void edit_personal_details(SqlConnection conn)
+        public static void edit_personal_details(SqlConnection conn, int user_id)
         {
+            Console.Write("Ente Name : ");
+            string add_name = Console.ReadLine();
+            Console.Write("Enter Surname : ");
+            string add_surname = Console.ReadLine();
+            Console.Write("Enter Age : ");
+            int add_age = Convert.ToInt32(Console.ReadLine());
+            Console.Write("Enter Gender (m/f) : ");
+            char add_gender = Convert.ToChar(Console.ReadLine());
+            Console.Write("Enter Contact No. : ");
+            string add_no = Console.ReadLine();
+            Console.Write("Enter e-mail address : ");
+            string add_email = Console.ReadLine();
+            Console.Write("Enter New Password : ");
+            string pass = Console.ReadLine();
 
+            SqlCommand addDetails = new SqlCommand("addDetails", conn);
+            addDetails.CommandType = CommandType.StoredProcedure;
+            addDetails.Parameters.Add("@id", user_id);
+            addDetails.Parameters.Add("@name", add_name);
+            addDetails.Parameters.Add("@surname", add_surname);
+            addDetails.Parameters.Add("@age", add_age);
+            addDetails.Parameters.Add("@gender", add_gender);
+            addDetails.Parameters.Add("@no", add_no);
+            addDetails.Parameters.Add("@email", add_email);
+            addDetails.Parameters.Add("@password", pass);
+
+            int result = addDetails.ExecuteNonQuery();
+
+            Console.WriteLine("Data Edited Successfully!");
         }
 
         public static void romove_permission(SqlConnection conn)
@@ -234,17 +252,10 @@ namespace HomeTaskWithPermissions
                     SqlCommand avilable_permissionQ = new SqlCommand("SELECT name FROM permissions WHERE id IN (SELECT permission_id FROM user_has_permissions WHERE user_id = @user_id)", conn);
                     avilable_permissionQ.Parameters.AddWithValue("@user_id", emp_id);
                     SqlDataReader avail_permission = avilable_permissionQ.ExecuteReader();
-                    //Console.WriteLine("--------------");
-                    //while (avail_permission.Read())
-                    //{
-                    //    Console.WriteLine(avail_permission["name"]);
-                    //}
-                    //Console.WriteLine("--------------");
 
                     int count = 0;
                     while(avail_permission.Read())
                     {
-                        //Console.WriteLine("---->{0}", Convert.ToString(avail_permission["name"]));
                         user_permissions[count] = Convert.ToString(avail_permission["name"]);
                         count++;
                     }
@@ -256,7 +267,6 @@ namespace HomeTaskWithPermissions
                             SqlCommand permissionIdQ = new SqlCommand("SELECT id FROM permissions WHERE name = @name", conn);
                             permissionIdQ.Parameters.AddWithValue("@name", item);
                             int permission_id = Convert.ToInt32(permissionIdQ.ExecuteScalar());
-                            Console.WriteLine("--{0}--{1}", emp_id, permission_id);
                             SqlCommand removePermission = new SqlCommand("removePermission", conn);
                             removePermission.CommandType = CommandType.StoredProcedure;
                             removePermission.Parameters.AddWithValue("@user_id", emp_id);
@@ -553,8 +563,34 @@ namespace HomeTaskWithPermissions
                                 Console.WriteLine(pair[choice]);
                                 var type = typeof(Services);
                                 var method = type.GetMethod(pair[choice]);
-                                object[] param = { conn };
-                                method.Invoke(null, param);
+                                if (pair[choice] == "list_personal_details")
+                                {
+                                    SqlCommand getRole = new SqlCommand("SELECT role_id FROM users WHERE id = @emp_id", conn);
+                                    getRole.Parameters.AddWithValue("@emp_id", emp_id);
+                                        
+                                    int role_id = Convert.ToInt32(getRole.ExecuteScalar());
+                                 
+                                    if(role_id == 3)
+                                    {
+                                        object[] param = { conn, emp_id };
+                                        method.Invoke(null, param);
+                                    }
+                                    else
+                                    {
+                                        object[] param = { conn, 0 };
+                                        method.Invoke(null, param);
+                                    }
+                                }
+                                else if (pair[choice] == "edit_personal_details")
+                                {
+                                    object[] param = { conn, emp_id };
+                                    method.Invoke(null, param);
+                                }
+                                else
+                                {
+                                    object[] param = { conn };
+                                    method.Invoke(null, param);
+                                }
                             }
                         } while (choice != 0);
                     }
