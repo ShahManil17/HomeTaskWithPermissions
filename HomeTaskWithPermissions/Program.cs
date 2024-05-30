@@ -300,6 +300,9 @@ namespace HomeTaskWithPermissions
             Console.WriteLine("1) Assign Permissions to the User");
             Console.WriteLine("2) Assign Permissions to the Role");
             Console.Write("Enter Your Choice (1  Or 2): ");
+
+
+
             int choice = Convert.ToInt32(Console.ReadLine());
             switch(choice)
             {
@@ -309,40 +312,63 @@ namespace HomeTaskWithPermissions
 
                     if(Validation.validateId(conn, emp_id))
                     {
+                        SqlCommand permitionCountQ = new SqlCommand("SELECT count(*) FROM permissions WHERE id IN (SELECT permission_id FROM user_has_permissions WHERE user_id = @user_id)", conn);
+                        permitionCountQ.Parameters.AddWithValue("@user_id", emp_id);
+                        int permissionCount = Convert.ToInt32(permitionCountQ.ExecuteScalar());
+                        string[] user_permissions = new string[permissionCount];
+
+                        SqlCommand userPermissionQ = new SqlCommand("SELECT name FROM permissions WHERE id IN (SELECT permission_id FROM user_has_permissions WHERE user_id = @user_id)", conn);
+                        userPermissionQ.Parameters.AddWithValue("@user_id", emp_id);
+                        
                         Console.Write("Enter Pemissions Saperated by coma (,) : ");
                         string[] permissions = Console.ReadLine().Split(',');
 
                         if(Validation.validatePermissions(conn, permissions))
                         {
                             int[] permission_id = new int[permissions.Length];
-                            Console.WriteLine();
-                            Console.WriteLine("Permission ID : {0}", permission_id.Length);
-                            Console.WriteLine("Permissions : {0}", permissions.Length);
-                            Console.WriteLine();
+
+                            using (SqlDataReader rd = userPermissionQ.ExecuteReader())
+                            {
+                                int userPermissionCount = 0;
+                                while(rd.Read())
+                                {
+                                    user_permissions[userPermissionCount] = Convert.ToString(rd["name"]);
+                                    userPermissionCount ++;
+                                }
+                            }
 
                             for (int i = 0; i < permissions.Length; i++)
                             {
-                                SqlCommand permissionCmd = new SqlCommand("SELECT id FROM permissions WHERE name = @name", conn);
-                                permissionCmd.Parameters.AddWithValue("@name", permissions[i]);
-                                using (SqlDataReader rd = permissionCmd.ExecuteReader())
+                                if (!user_permissions.Contains(permissions[i]))
                                 {
-                                    //list_all_users,edit_user_details,add_new_user
-                                    while (rd.Read())
+                                    SqlCommand permissionCmd = new SqlCommand("SELECT id FROM permissions WHERE name = @name", conn);
+                                    permissionCmd.Parameters.AddWithValue("@name", permissions[i]);
+                                    using (SqlDataReader rd = permissionCmd.ExecuteReader())
                                     {
-                                        permission_id[i] = Convert.ToInt32(rd["id"]);
-
+                                        while (rd.Read())
+                                        {
+                                            permission_id[i] = Convert.ToInt32(rd["id"]);
+                                        }
                                     }
+                                    //Console.WriteLine("Permission '{0}' Granted Succesfully", permissions[i]);
+                                }
+                                else
+                                {
+                                    Console.WriteLine("Permission '{0}' Already Available", permissions[i]);
                                 }
                             }
 
                             foreach (var item in permission_id)
                             {
-                                SqlCommand addPrmission = new SqlCommand("assignPermission", conn);
-                                addPrmission.CommandType = CommandType.StoredProcedure;
-                                addPrmission.Parameters.AddWithValue("@user_id", emp_id);
-                                addPrmission.Parameters.AddWithValue("@permission_id", item);   
+                                if(item != 0)
+                                {
+                                    SqlCommand addPrmission = new SqlCommand("assignPermission", conn);
+                                    addPrmission.CommandType = CommandType.StoredProcedure;
+                                    addPrmission.Parameters.AddWithValue("@user_id", emp_id);
+                                    addPrmission.Parameters.AddWithValue("@permission_id", item);   
 
-                                int permissionResult = addPrmission.ExecuteNonQuery();
+                                    int permissionResult = addPrmission.ExecuteNonQuery();
+                                }
                             }
                             Console.WriteLine("Permission Granted Successfully!");
                         }
@@ -351,12 +377,11 @@ namespace HomeTaskWithPermissions
                             Console.WriteLine();
                             Console.WriteLine("Invalid Permission/s entered!");
                         }
-
                     }
                     else
                     {
                         Console.WriteLine();
-                        Console.WriteLine("Entered id is not registered in the  system!");
+                        Console.WriteLine("Entered id is not registered in the system!");
                         Console.WriteLine();
                     }
                     break;
